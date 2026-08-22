@@ -1,0 +1,19 @@
+# Valve / Steam relay ranges plus a few fixed endpoints used by WARDOGS.
+#
+# These carry the actual match traffic. Without them the client reaches the
+# lobby but drops back to the menu when joining a server.
+# Consumed by forkop section Zapret_Badseq_Alt2.
+#
+# Valve Steam Datagram Relay ranges (observed on UDP 27015-27133)
+162.254.192.0/20
+155.133.224.0/19
+103.28.54.0/24
+103.10.124.0/23
+# individual Valve endpoints seen in the traffic dump
+205.196.6.149/32
+45.121.184.6/32
+146.66.152.36/32
+# CDN / edge endpoints reported by the community fix for the same issue
+104.18.29.123/32
+150.171.109.51/32
+143.244.45.177/32
