@@ -37,6 +37,6 @@ fi
   echo "# Regenerated automatically - do not edit by hand."
   echo "# prefixes: $COUNT"
   cat "$PFX"
-} > lists/aws-eu-ec2.txt
+} > lists/aws-eu-ec2.lst
 
-echo "wrote lists/aws-eu-ec2.txt ($COUNT prefixes)"
+echo "wrote lists/aws-eu-ec2.lst ($COUNT prefixes)"
