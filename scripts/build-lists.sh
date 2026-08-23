@@ -40,3 +40,26 @@ fi
 } > lists/aws-eu-ec2.lst
 
 echo "wrote lists/aws-eu-ec2.lst ($COUNT prefixes)"
+
+# sing-box source rule-set. Needed because forkop's "rule_set_with_subnets"
+# option builds a proper route rule from it, while a plain .lst consumed via
+# "domain_ip_lists" only fills the nftables set and leaves sing-box without a
+# matching rule (traffic then falls through to the catch-all outbound).
+{
+  printf '{
+  "version": 3,
+  "rules": [
+    {
+      "ip_cidr": [
+'
+  awk 'NR>1 { printf ",
+" } { printf "        \"%s\"", $0 }' "$PFX"
+  printf '
+      ]
+    }
+  ]
+}
+'
+} > lists/aws-eu-ec2.json
+
+echo "wrote lists/aws-eu-ec2.json ($COUNT prefixes)"

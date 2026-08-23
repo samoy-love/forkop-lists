@@ -1,3 +1,4 @@
 * text=auto eol=lf
 *.lst text eol=lf
+*.json text eol=lf
 *.sh text eol=lf
