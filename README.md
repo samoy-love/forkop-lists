@@ -49,7 +49,7 @@ the UCI option `domain_ip_lists`. It takes URLs (or local paths) to `.lst` files
 domains and/or subnets, and forkop splits the two apart on import.
 
 ```
-uci add_list forkop.<Section>.domain_ip_lists='https://raw.githubusercontent.com/tr0llex/forkop-lists/main/lists/aws-eu-ec2.lst'
+uci add_list forkop.<Section>.domain_ip_lists='https://raw.githubusercontent.com/samoy-love/forkop-lists/main/lists/aws-eu-ec2.lst'
 uci commit forkop && /etc/init.d/forkop restart
 ```
 
