@@ -2,10 +2,10 @@ name: update-lists
 
 on:
   schedule:
-    # GitHub's minimum interval. Note: scheduled runs are best-effort and are
-    # frequently delayed by 10-30 min under load, so treat 5 min as a floor,
-    # not a guarantee. AWS ranges change rarely, so this is acceptable.
-    - cron: '*/5 * * * *'
+    # Раз в час: диапазоны AWS меняются редко, а роутер и так тянет список
+    # раз в час (list_update_enabled + update_interval=1h). Прежние */5 давали
+    # 288 прогонов в сутки без всякой пользы.
+    - cron: '17 * * * *'
   workflow_dispatch:
   push:
     branches: [ main ]
