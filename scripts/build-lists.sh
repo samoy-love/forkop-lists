@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rebuilds the subnet lists consumed by forkop (OpenWrt router) via remote_subnet_lists URLs.
+# Пересобирает списки подсетей, которые роутер тянет через remote_subnet_lists.
 set -euo pipefail
 
 SRC="https://ip-ranges.amazonaws.com/ip-ranges.json"
@@ -9,57 +9,62 @@ trap 'rm -f "$RAW" "$PFX"' EXIT
 
 curl -fsSL --retry 5 --retry-delay 3 -o "$RAW" "$SRC"
 
-# EC2 prefixes of every eu-* region, MINUS the DYNAMODB prefixes.
+# Префиксы EC2 европейских регионов И региона GLOBAL, МИНУС префиксы DYNAMODB.
 #
-# Why DYNAMODB is excluded: games measure per-region latency by opening a TCP
-# connection to dynamodb.<region>.amazonaws.com. If those prefixes are routed
-# through sing-box, the handshake completes locally on the router and every
-# region reports ~5 ms, which breaks server selection. Measured proof:
-# eu-north-1 read 4.7 ms while intercepted vs 27.1 ms once excluded.
+# Почему нужен GLOBAL: серверы матчей Wardogs живут в 54.115.0.0/16, а этот
+# префикс опубликован AWS с region="GLOBAL", а не "eu-*". Пока фильтр брал
+# только eu-*, игровой UDP не попадал в обход, и через полторы секунды после
+# начала матча игрока выбрасывало. Проверено 09.09.2026: 54.115.0.0/16
+# присутствует в ip-ranges.json как service=EC2, region=GLOBAL.
+#
+# Почему исключается DYNAMODB: игры измеряют задержку до региона, открывая
+# TCP-соединение к dynamodb.<region>.amazonaws.com. Если эти префиксы завернуть
+# в sing-box, рукопожатие завершается локально на роутере и все регионы
+# показывают ~5 мс, что ломает выбор сервера. Замер: eu-north-1 показывал
+# 4.7 мс при перехвате против 27.1 мс без него.
 jq -r '
   ([.prefixes[] | select(.service == "DYNAMODB") | .ip_prefix] | unique) as $ddb
   | .prefixes[]
   | select(.service == "EC2")
-  | select(.region | startswith("eu-"))
+  | select((.region | startswith("eu-")) or (.region == "GLOBAL"))
   | select(.ip_prefix as $p | ($ddb | index($p)) | not)
   | .ip_prefix
 ' "$RAW" | sort -u > "$PFX"
 
 COUNT=$(wc -l < "$PFX")
 if [ "$COUNT" -lt 100 ]; then
-  echo "refusing to publish: only $COUNT prefixes (expected >=100)" >&2
+  echo "отказываюсь публиковать: всего $COUNT префиксов (ожидалось >=100)" >&2
+  exit 1
+fi
+
+# Страховка: подсеть серверов матчей Wardogs обязана быть в списке.
+if ! grep -qx '54\.115\.0\.0/16' "$PFX"; then
+  echo "отказываюсь публиковать: в списке нет 54.115.0.0/16 (серверы матчей Wardogs)" >&2
   exit 1
 fi
 
 {
-  echo "# AWS EC2 ranges for all eu-* regions, excluding the DYNAMODB service."
-  echo "# Consumed by forkop section Zapret_GameServers_UDP (UDP 1024-65535 only)."
-  echo "# Regenerated automatically - do not edit by hand."
-  echo "# prefixes: $COUNT"
+  echo "# Диапазоны AWS EC2: все регионы eu-* плюс GLOBAL, без сервиса DYNAMODB."
+  echo "# Потребитель — роутер OpenWrt, секция Zapret_Games через remote_subnet_lists."
+  echo "# Файл собирается автоматически, руками не править."
+  echo "# префиксов: $COUNT"
   cat "$PFX"
 } > lists/aws-eu-ec2.lst
 
-echo "wrote lists/aws-eu-ec2.lst ($COUNT prefixes)"
+echo "записан lists/aws-eu-ec2.lst ($COUNT префиксов)"
 
-# sing-box source rule-set. Needed because forkop's "rule_set_with_subnets"
-# option builds a proper route rule from it, while a plain .lst consumed via
-# "domain_ip_lists" only fills the nftables set and leaves sing-box without a
-# matching rule (traffic then falls through to the catch-all outbound).
-{
-  printf '{
-  "version": 3,
-  "rules": [
-    {
-      "ip_cidr": [
-'
-  awk 'NR>1 { printf ",
-" } { printf "        \"%s\"", $0 }' "$PFX"
-  printf '
-      ]
-    }
-  ]
-}
-'
-} > lists/aws-eu-ec2.json
+# Тот же список в виде source rule-set для sing-box.
+#
+# ВНИМАНИЕ: подключать этот .json через rule_set_with_subnets НЕЛЬЗЯ —
+# sing-box 1.14 отвергает IP-фильтры в DNS-правилах и падает на старте с
+# "Legacy Address Filter Fields in DNS rules is deprecated". Роутер потребляет
+# .lst через remote_subnet_lists. Файл оставлен для совместимости.
+#
+# JSON собирается через jq, а не printf+awk: прежняя версия скрипта падала,
+# потому что внутри awk-программы стоял настоящий перевод строки вместо \n,
+# и awk отвечал "unterminated string" (все прогоны с 08.09 были красные).
+jq -R -s -c '
+  {version: 3, rules: [ {ip_cidr: (split("\n") | map(select(length > 0))) } ]}
+' "$PFX" | jq '.' > lists/aws-eu-ec2.json
 
-echo "wrote lists/aws-eu-ec2.json ($COUNT prefixes)"
+echo "записан lists/aws-eu-ec2.json ($COUNT префиксов)"
