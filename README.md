@@ -13,6 +13,8 @@ work happens in CI and the router just fetches URLs — nothing to maintain on t
 | `lists/wardogs-game-ips.lst` | [raw](../../raw/main/lists/wardogs-game-ips.lst) | plain domain/IP list |
 | `lists/aws-eu-ec2.json` | [raw](../../raw/main/lists/aws-eu-ec2.json) | sing-box source rule-set |
 | `lists/wardogs-game-ips.json` | [raw](../../raw/main/lists/wardogs-game-ips.json) | sing-box source rule-set |
+| `lists/aws-eu-ec2.srs` | [raw](../../raw/main/lists/aws-eu-ec2.srs) | sing-box binary rule-set |
+| `lists/wardogs-game-ips.srs` | [raw](../../raw/main/lists/wardogs-game-ips.srs) | sing-box binary rule-set |
 
 `aws-eu-ec2.lst` is rebuilt by `.github/workflows/update-lists.yml` from
 <https://ip-ranges.amazonaws.com/ip-ranges.json>. `wardogs-game-ips.lst` is hand-maintained.
@@ -67,10 +69,18 @@ source `.json` rule-set; a plain `.lst` there is interpreted as a binary rule-se
 sing-box reject the configuration.
 
 The neighbouring **"Rule sets"** (`rule_set`) field is for the `.srs` / `.json` files listed
-above when the consumer explicitly supports sing-box source rule-sets. The JSON files are
-generated from the corresponding `.lst` files and are kept in sync by CI.
+above when the consumer explicitly supports sing-box rule-sets. The JSON files are generated
+from the corresponding `.lst` files and are kept in sync by CI.
 
-This repository intentionally publishes source-format `.json`, not compiled binary `.srs`,
-because the plain `.lst` links are the primary format consumed by Tachyon and Forkop.
+For Tachyon, use these `.srs` URLs in **Conditions -> "Rule sets"** when the list must be
+used as a sing-box rule-set:
+
+```
+https://raw.githubusercontent.com/samoy-love/forkop-lists/main/lists/aws-eu-ec2.srs
+https://raw.githubusercontent.com/samoy-love/forkop-lists/main/lists/wardogs-game-ips.srs
+```
+
+The `.srs` files are compiled from the corresponding source `.json` files with sing-box
+1.14.0. The plain `.lst` links remain available for **Domain and IP lists** consumers.
 
 Lists refresh on forkop's own interval (`update_interval`, currently `1h`).

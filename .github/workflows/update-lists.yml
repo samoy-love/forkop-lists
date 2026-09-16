@@ -23,8 +23,20 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SING_BOX_VERSION: 1.14.0
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install sing-box
+        run: |
+          singbox_archive="sing-box-${SING_BOX_VERSION}-linux-amd64-glibc.tar.gz"
+          curl -fsSL --retry 5 --retry-delay 3 \
+            -o "/tmp/${singbox_archive}" \
+            "https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/${singbox_archive}"
+          tar -xzf "/tmp/${singbox_archive}" -C /tmp
+          sudo install "/tmp/sing-box-${SING_BOX_VERSION}-linux-amd64-glibc/sing-box" /usr/local/bin/sing-box
+          sing-box version
 
       - name: Build lists
         run: bash scripts/build-lists.sh
@@ -33,6 +45,9 @@ jobs:
         run: |
           for file in lists/*.json; do
             jq -e '(.version == 3) and (.rules | type == "array") and all(.rules[]; (.ip_cidr // []) | type == "array")' "$file" >/dev/null
+          done
+          for file in lists/*.srs; do
+            test "$(dd if="$file" bs=1 count=3 2>/dev/null)" = "SRS"
           done
 
       - name: Commit when changed

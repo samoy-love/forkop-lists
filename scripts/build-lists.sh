@@ -73,4 +73,8 @@ write_source_ruleset() {
 write_source_ruleset lists/aws-eu-ec2.lst lists/aws-eu-ec2.json
 write_source_ruleset lists/wardogs-game-ips.lst lists/wardogs-game-ips.json
 
-echo "записаны source rule-sets из .lst списков"
+SING_BOX_BIN="${SING_BOX_BIN:-sing-box}"
+"$SING_BOX_BIN" rule-set compile --output lists/aws-eu-ec2.srs lists/aws-eu-ec2.json
+"$SING_BOX_BIN" rule-set compile --output lists/wardogs-game-ips.srs lists/wardogs-game-ips.json
+
+echo "записаны source и binary rule-sets из .lst списков"
