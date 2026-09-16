@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Пересобирает списки подсетей, которые роутер тянет через remote_subnet_lists.
+# Пересобирает списки подсетей, которые роутер тянет через domain_ip_lists.
 set -euo pipefail
 
 SRC="https://ip-ranges.amazonaws.com/ip-ranges.json"
@@ -45,7 +45,7 @@ fi
 
 {
   echo "# Диапазоны AWS EC2: все регионы eu-* плюс GLOBAL, без сервиса DYNAMODB."
-  echo "# Потребитель — роутер OpenWrt, секция Zapret_Games через remote_subnet_lists."
+  echo "# Потребитель — роутер OpenWrt, секции Tachyon/Forkop через domain_ip_lists."
   echo "# Файл собирается автоматически, руками не править."
   echo "# префиксов: $COUNT"
   cat "$PFX"
@@ -53,18 +53,24 @@ fi
 
 echo "записан lists/aws-eu-ec2.lst ($COUNT префиксов)"
 
-# Тот же список в виде source rule-set для sing-box.
-#
-# ВНИМАНИЕ: подключать этот .json через rule_set_with_subnets НЕЛЬЗЯ —
-# sing-box 1.14 отвергает IP-фильтры в DNS-правилах и падает на старте с
-# "Legacy Address Filter Fields in DNS rules is deprecated". Роутер потребляет
-# .lst через remote_subnet_lists. Файл оставлен для совместимости.
-#
-# JSON собирается через jq, а не printf+awk: прежняя версия скрипта падала,
-# потому что внутри awk-программы стоял настоящий перевод строки вместо \n,
-# и awk отвечал "unterminated string" (все прогоны с 08.09 были красные).
-jq -R -s -c '
-  {version: 3, rules: [ {ip_cidr: (split("\n") | map(select(length > 0))) } ]}
-' "$PFX" | jq '.' > lists/aws-eu-ec2.json
+write_source_ruleset() {
+  local input="$1"
+  local output="$2"
 
-echo "записан lists/aws-eu-ec2.json ($COUNT префиксов)"
+  jq -R -s '
+    {version: 3, rules: [
+      {ip_cidr: (
+        split("\n")
+        | map(gsub("^[[:space:]]+|[[:space:]]+$"; ""))
+        | map(select(length > 0 and (startswith("#") | not)))
+      )}
+    ]}
+  ' "$input" > "$output"
+}
+
+# Source rule-sets are generated from the plain lists so the two public formats
+# cannot silently drift apart.
+write_source_ruleset lists/aws-eu-ec2.lst lists/aws-eu-ec2.json
+write_source_ruleset lists/wardogs-game-ips.lst lists/wardogs-game-ips.json
+
+echo "записаны source rule-sets из .lst списков"

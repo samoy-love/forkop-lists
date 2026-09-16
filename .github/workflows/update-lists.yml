@@ -29,6 +29,12 @@ jobs:
       - name: Build lists
         run: bash scripts/build-lists.sh
 
+      - name: Validate source rule-sets
+        run: |
+          for file in lists/*.json; do
+            jq -e '(.version == 3) and (.rules | type == "array") and all(.rules[]; (.ip_cidr // []) | type == "array")' "$file" >/dev/null
+          done
+
       - name: Commit when changed
         run: |
           if [ -n "$(git status --porcelain lists/)" ]; then

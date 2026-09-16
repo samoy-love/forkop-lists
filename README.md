@@ -1,6 +1,6 @@
 # forkop-lists
 
-Subnet lists for a [forkop](https://github.com/itdoginfo/podkop) / sing-box setup on an OpenWrt router.
+Subnet lists for a [forkop](https://github.com/itdoginfo/podkop) / Tachyon / sing-box setup on an OpenWrt router.
 
 The router used to regenerate these with a local cron job. They now live here so the
 work happens in CI and the router just fetches URLs — nothing to maintain on the device.
@@ -9,11 +9,13 @@ work happens in CI and the router just fetches URLs — nothing to maintain on t
 
 | File | Raw URL | Used by |
 |---|---|---|
-| `lists/aws-eu-ec2.lst` | [raw](../../raw/main/lists/aws-eu-ec2.lst) | forkop section `Zapret_GameServers_UDP` |
-| `lists/wardogs-game-ips.lst` | [raw](../../raw/main/lists/wardogs-game-ips.lst) | forkop section `Zapret_Badseq_Alt2` |
+| `lists/aws-eu-ec2.lst` | [raw](../../raw/main/lists/aws-eu-ec2.lst) | plain domain/IP list |
+| `lists/wardogs-game-ips.lst` | [raw](../../raw/main/lists/wardogs-game-ips.lst) | plain domain/IP list |
+| `lists/aws-eu-ec2.json` | [raw](../../raw/main/lists/aws-eu-ec2.json) | sing-box source rule-set |
+| `lists/wardogs-game-ips.json` | [raw](../../raw/main/lists/wardogs-game-ips.json) | sing-box source rule-set |
 
-`aws-eu-ec2.txt` is rebuilt by `.github/workflows/update-lists.yml` from
-<https://ip-ranges.amazonaws.com/ip-ranges.json>. `wardogs-game-ips.txt` is hand-maintained.
+`aws-eu-ec2.lst` is rebuilt by `.github/workflows/update-lists.yml` from
+<https://ip-ranges.amazonaws.com/ip-ranges.json>. `wardogs-game-ips.lst` is hand-maintained.
 
 ## Why DYNAMODB prefixes are excluded
 
@@ -42,21 +44,33 @@ The workflow is set to `*/5 * * * *`, which is GitHub's minimum. Scheduled workf
 best-effort and often run late under load. AWS ranges change on the order of days, so the
 real refresh rate is not important; the interval is just a ceiling on staleness.
 
-## Consuming from forkop
+## Consuming from forkop or Tachyon
 
-In LuCI these lists go into a section's **Conditions -> "Domain and IP lists"** field, which is
-the UCI option `domain_ip_lists`. It takes URLs (or local paths) to `.lst` files holding
-domains and/or subnets, and forkop splits the two apart on import.
+In LuCI these `.lst` lists go into a section's **Conditions -> "Domain and IP lists"** field,
+which is the UCI option `domain_ip_lists`. It takes URLs (or local paths) to plain text files
+holding domains and/or subnets, and the router splits the two apart on import.
 
 ```
 uci add_list forkop.<Section>.domain_ip_lists='https://raw.githubusercontent.com/samoy-love/forkop-lists/main/lists/aws-eu-ec2.lst'
 uci commit forkop && /etc/init.d/forkop restart
 ```
 
-Do **not** use `remote_subnet_lists` — the option exists in the code but the sing-box config
-generator rejects it with `section has unsupported matcher remote_subnet_lists`.
+For Tachyon, add these same URLs to **Conditions -> "Domain and IP lists"**:
 
-The neighbouring field **"Rule sets"** (`rule_set`) takes `.srs` / `.json` instead, but it
-ignores subnets by default, so it is the wrong choice for these files.
+```
+https://raw.githubusercontent.com/samoy-love/forkop-lists/main/lists/aws-eu-ec2.lst
+https://raw.githubusercontent.com/samoy-love/forkop-lists/main/lists/wardogs-game-ips.lst
+```
+
+Do **not** put the `.lst` URLs into **"Rule sets"**. That field expects a sing-box `.srs` or
+source `.json` rule-set; a plain `.lst` there is interpreted as a binary rule-set and makes
+sing-box reject the configuration.
+
+The neighbouring **"Rule sets"** (`rule_set`) field is for the `.srs` / `.json` files listed
+above when the consumer explicitly supports sing-box source rule-sets. The JSON files are
+generated from the corresponding `.lst` files and are kept in sync by CI.
+
+This repository intentionally publishes source-format `.json`, not compiled binary `.srs`,
+because the plain `.lst` links are the primary format consumed by Tachyon and Forkop.
 
 Lists refresh on forkop's own interval (`update_interval`, currently `1h`).
