@@ -9,3 +9,8 @@
 
 devportal.jamendo.com
 jamendo.com
+
+# Выдача ссылок на образы Windows: microsoft.com отвечает отказом по стране,
+# через VPN ссылка выдаётся. Сам образ качается напрямую с CDN.
+vlscppe.microsoft.com
+www.microsoft.com
