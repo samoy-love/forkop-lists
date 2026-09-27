@@ -17,3 +17,8 @@ jamendo.com
 ncs.io
 # dzcdn.net — отрывки Deezer (cdnt-preview.dzcdn.net): каждое третье скачивание рвётся.
 dzcdn.net
+
+# Messenger, 27.09.2026. Раньше жил в секции Zapret вместе с доменами Meta; их
+# увели в main (края Meta из дома режутся по IP), а в community-списке meta
+# messenger.com нет — без этой строки он уходил напрямую и висел до таймаута.
+messenger.com
