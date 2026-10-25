@@ -1,0 +1,16 @@
+name: Проверки
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Проверить синтаксис сборки списков
+        run: bash -n scripts/build-lists.sh
+      - name: Проверить JSON списков
+        run: python3 -c "import json, pathlib; [json.loads(p.read_text()) for p in pathlib.Path('lists').glob('*.json')]"
